@@ -20,6 +20,12 @@ jobs:
       - checkout
 
       - run:
+          name: update submodules
+          command: |
+              git submodule init
+              git submodule update
+
+      - run:
           name: run tests
           command: |
             python setup.py test
