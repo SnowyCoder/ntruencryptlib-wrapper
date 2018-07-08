@@ -29,8 +29,6 @@ The NTRU Encryption algorithm is a lattice-based asymmetric encryption algorithm
     Install ntruencrypt:
 ------------------------
 
-Note: you need ntruencryptlib to be pre-installed.
-
 ::
 
     git clone https://github.com/SnowyCoder/ntruencryptlib-wrapper
@@ -44,7 +42,8 @@ Note: you need ntruencryptlib to be pre-installed.
     System Requirements:
 ------------------------
 
-* `libtruencrypt <https://github.com/NTRUOpenSourceProject/NTRUEncrypt>`_
+* Linux or Mac (for now)
+* Autotools and compilation tools
 * Python3
 
 ----

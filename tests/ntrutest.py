@@ -85,8 +85,15 @@ class NtruTest(unittest.TestCase):
     def test_message_too_long(self):
         pub_key, prv_key = ntruencrypt.create_keys()
         message_size = pub_key.max_message_len + 1
-        data = ['?'] * message_size
+        data = b'?' * message_size
         self.assertRaises(ValueError, pub_key.encrypt, data)
+
+    def test_wrong_parameter_type(self):
+        pub_key, prv_key = ntruencrypt.create_keys()
+        # The only convertible type is bytes, every type convertion falls out of the scope of this library
+        self.assertRaises(ValueError, pub_key.encrypt, "Non bytes string")  # Non-bytes string (notice missing b prefix)
+        self.assertRaises(ValueError, pub_key.encrypt, 42)                  # Random int
+        self.assertRaises(ValueError, pub_key.encrypt, (b'First', 42))      # Any other non-bytes thing
 
 
 if __name__ == '__main__':

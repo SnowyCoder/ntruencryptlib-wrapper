@@ -1,16 +1,39 @@
+import ctypes
+import os
 import secrets
-from ctypes import CDLL, CFUNCTYPE, POINTER, byref, c_char, c_uint8, c_uint16, c_uint32
+import sys
+from ctypes import CFUNCTYPE, POINTER, byref, c_char, c_uint8, c_uint16, c_uint32
 from ctypes import cast, c_void_p
+import ctypes.util
 from enum import Enum
 
-NTRU_PATH = 'libntruencrypt.so'
+if os.name == 'nt':
+    LIB_SUFFIX = '.dll'
+elif os.name == 'posix':
+    LIB_SUFFIX = '.dylib' if sys.platform == 'darwin' else '.so'
+else:
+    raise Exception("Unknown OS name")
+
+
+__location__ = os.path.realpath(os.path.join(os.getcwd(), os.path.dirname(__file__)))
+
+
+NTRU_PATHS = ['libntruencrypt', os.path.join(__location__, 'libntruencrypt')]
 NULL = 0
 
-try:
-    ntru = CDLL(NTRU_PATH)
-except OSError:
-    raise EnvironmentError("Cannot find " + NTRU_PATH + ", please install libntruencrypt and try again") from None
 
+def search_ntru():
+    global ntru
+    for path in NTRU_PATHS:
+        try:
+            ntru = ctypes.CDLL(path + LIB_SUFFIX)
+            return
+        except OSError:
+            pass
+    raise EnvironmentError("Cannot find libntruencrypt library, please install libntruencrypt and try again")
+
+
+search_ntru()
 randbytesfunction = CFUNCTYPE(c_uint32, POINTER(c_uint8), c_uint32)
 
 
@@ -182,7 +205,7 @@ def encrypt(drbg, public_key, data):
     )
     parse_error(rt)
 
-    return encrypted
+    return encrypted.raw
 
 
 def decrypt(private_key, encrypted):

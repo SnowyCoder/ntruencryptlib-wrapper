@@ -1,0 +1,3 @@
+[submodule "extern/ntruencrypt"]
+	path = extern/ntruencrypt
+	url = https://github.com/NTRUOpenSourceProject/NTRUEncrypt

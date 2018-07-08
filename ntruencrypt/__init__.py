@@ -80,6 +80,10 @@ class PublicKey(Key):
     def encrypt(self, data, drbg=None):
         if not drbg:
             drbg = _def_drbg
+
+        if not isinstance(data, bytes):
+            raise ValueError("Passed data isn't bytes, cannot encrypt %s" % type(data).__name__)
+
         if len(data) > self.max_message_len:
             raise ValueError("The data to encrypt is too big for this encryption parameter (given: %s bytes, max: %s "
                              "bytes)" % (len(data), self.max_message_len))
