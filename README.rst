@@ -2,6 +2,17 @@
     Python NtruEncrypt Wrapper
 ==============================
 
+|CircleciImage|_ |LicenseImage|_ |PrImage|_
+
+.. |CircleciImage| image:: https://circleci.com/gh/SnowyCoder/ntruencryptlib-wrapper/tree/master.svg?style=shield
+.. _CircleciImage: https://circleci.com/gh/SnowyCoder/ntruencryptlib-wrapper/tree/master
+
+.. |LicenseImage| image:: https://img.shields.io/badge/License-MIT-blue.svg?style=flat
+.. _LicenseImage: https://github.com/SnowyCoder/ntruencryptlib-wrapper/blob/master/LICENSE.md
+
+.. |PrImage| image:: https://img.shields.io/badge/PRs-welcome-brightgreen.svg?style=flat
+.. _PrImage: http://makeapullrequest.com/
+
 
 **Encrypt your data using NTRU encryption**
 
