@@ -20,6 +20,7 @@ __location__ = os.path.realpath(os.path.join(os.getcwd(), os.path.dirname(__file
 
 NTRU_PATHS = ['libntruencrypt', os.path.join(__location__, 'libntruencrypt')]
 NULL = 0
+NULL_BYTEBUF = cast(NULL, POINTER(c_char))
 
 
 def search_ntru():
@@ -81,6 +82,10 @@ class EncryptParamSetId(Enum):
 EncryptParamSetId.__OID_MAPPING__ = {e.oid: e for e in EncryptParamSetId}
 EncryptParamSetId.from_oid = lambda oid: EncryptParamSetId.__OID_MAPPING__[oid]
 
+
+# ---------------- ERRORS ----------------
+
+
 NTRU_ERROR_CODE_TO_MESSAGE = {
     1: "Fail",
     2: "Bad parameter",
@@ -122,32 +127,71 @@ def parse_error_drbg(return_code):
         raise ValueError(DRBG_ERROR_CODE_TO_MESSAGE[return_code - DRBG_ERROR_BASE])
 
 
+# ---------------- Define used ntru methods ----------------
+
+
+drgb_external_instantiate = ntru.ntru_crypto_drbg_external_instantiate
+drgb_external_instantiate.argtypes = [randbytesfunction, POINTER(c_uint32)]
+drgb_external_instantiate.restype = c_uint32
+
+drgb_uninstantiate = ntru.ntru_crypto_drbg_uninstantiate
+drgb_uninstantiate.argtypes = [c_uint32]
+drgb_uninstantiate.restype = c_uint32
+
+ntru_encrypt_keygen = ntru.ntru_crypto_ntru_encrypt_keygen
+ntru_encrypt_keygen.argtypes = [c_uint32, c_uint8, POINTER(c_uint16), POINTER(c_char), POINTER(c_uint16), POINTER(c_char)]
+ntru_encrypt_keygen.restype = c_uint32
+
+ntru_encrypt_public_key_info_to_subject_public_key_info = ntru.ntru_crypto_ntru_encrypt_publicKey2SubjectPublicKeyInfo
+ntru_encrypt_public_key_info_to_subject_public_key_info.argtypes = [
+    c_uint16, POINTER(c_char), POINTER(c_uint16), POINTER(c_char)
+]
+ntru_encrypt_public_key_info_to_subject_public_key_info.restype = c_uint32
+
+ntru_encrypt_subject_public_key_info_to_public_key = ntru.ntru_crypto_ntru_encrypt_subjectPublicKeyInfo2PublicKey
+ntru_encrypt_subject_public_key_info_to_public_key.argtypes = [
+    POINTER(c_char), POINTER(c_uint16), POINTER(c_char), POINTER(POINTER(c_char)), POINTER(c_uint32)
+]
+ntru_encrypt_subject_public_key_info_to_public_key.restype = c_uint32
+
+ntru_encrypt = ntru.ntru_crypto_ntru_encrypt
+ntru_encrypt.argtypes = [c_uint32, c_uint16, POINTER(c_char), c_uint16, POINTER(c_char), POINTER(c_uint16), POINTER(c_char)]
+ntru_encrypt.restype = c_uint32
+
+ntru_decrypt = ntru.ntru_crypto_ntru_decrypt
+ntru_decrypt.argtypes = [c_uint16, POINTER(c_char), c_uint16, POINTER(c_char), POINTER(c_uint16), POINTER(c_char)]
+ntru_decrypt.restype = c_uint32
+
+
+# ---------------- Wrapper functions ----------------
+
+
 def create_drbg(rand_bytes_func=crandbytes):
     handle = c_uint32()
-    rc = ntru.ntru_crypto_drbg_external_instantiate(rand_bytes_func, byref(handle))
+    rc = drgb_external_instantiate(rand_bytes_func, byref(handle))
     parse_error_drbg(rc)
     return handle
 
 
 def destory_drbg(drbg):
-    rc = ntru.ntru_crypto_drbg_uninstantiate(drbg)
+    rc = drgb_uninstantiate(drbg)
     parse_error_drbg(rc)
 
 
 def create_keys(drbg, encryption_param_set: EncryptParamSetId):
     public_key_len, private_key_len = c_uint16(), c_uint16()
 
-    rc = ntru.ntru_crypto_ntru_encrypt_keygen(
+    rc = ntru_encrypt_keygen(
         drbg, encryption_param_set.value,
-        byref(public_key_len), NULL,
-        byref(private_key_len), NULL
+        byref(public_key_len), NULL_BYTEBUF,
+        byref(private_key_len), NULL_BYTEBUF
     )
     parse_error(rc)
 
     public_key = (c_char * public_key_len.value)()
     private_key = (c_char * private_key_len.value)()
 
-    rc = ntru.ntru_crypto_ntru_encrypt_keygen(
+    rc = ntru_encrypt_keygen(
         drbg, encryption_param_set.value,
         byref(public_key_len), public_key,
         byref(private_key_len), private_key
@@ -159,11 +203,11 @@ def create_keys(drbg, encryption_param_set: EncryptParamSetId):
 def public_key_to_subject_public_key_info(public_key):
     encoded_len = c_uint16()
     rc = ntru.ntru_crypto_ntru_encrypt_publicKey2SubjectPublicKeyInfo(
-        len(public_key), public_key, byref(encoded_len), NULL
+        len(public_key), public_key, byref(encoded_len), NULL_BYTEBUF
     )
     parse_error(rc)
     encoded_public_key = (c_char * encoded_len.value)()
-    rc = ntru.ntru_crypto_ntru_encrypt_publicKey2SubjectPublicKeyInfo(
+    rc = ntru_encrypt_public_key_info_to_subject_public_key_info(
         len(public_key), public_key, byref(encoded_len), encoded_public_key
     )
     parse_error(rc)
@@ -176,15 +220,15 @@ def public_key_info_to_subject_public_key(public_key_info):
     next_len = c_uint32(len(public_key_info))
     public_key_len = c_uint16()
 
-    rc = ntru.ntru_crypto_ntru_encrypt_subjectPublicKeyInfo2PublicKey(
-        n, byref(public_key_len), NULL, byref(n), byref(next_len)
+    rc = ntru_encrypt_subject_public_key_info_to_public_key(
+        n, byref(public_key_len), NULL_BYTEBUF, byref(n), byref(next_len)
     )
     parse_error(rc)
 
     public_key = (c_char * public_key_len.value)()
 
-    rc = ntru.ntru_crypto_ntru_encrypt_subjectPublicKeyInfo2PublicKey(
-        n, byref(public_key_len), byref(public_key), byref(n), byref(next_len)
+    rc = ntru_encrypt_subject_public_key_info_to_public_key(
+        n, byref(public_key_len), public_key, byref(n), byref(next_len)
     )
     parse_error(rc)
     return public_key.raw[:public_key_len.value]
@@ -193,14 +237,14 @@ def public_key_info_to_subject_public_key(public_key_info):
 def encrypt(drbg, public_key, data):
     encrypted_len = c_uint16()
 
-    rt = ntru.ntru_crypto_ntru_encrypt(
-        drbg, len(public_key), public_key, len(data), data, byref(encrypted_len), NULL
+    rt = ntru_encrypt(
+        drbg, len(public_key), public_key, len(data), data, byref(encrypted_len), NULL_BYTEBUF
     )
     parse_error(rt)
 
     encrypted = (c_char * encrypted_len.value)()
 
-    rt = ntru.ntru_crypto_ntru_encrypt(
+    rt = ntru_encrypt(
         drbg, len(public_key), public_key, len(data), data, byref(encrypted_len), encrypted
     )
     parse_error(rt)
@@ -210,14 +254,14 @@ def encrypt(drbg, public_key, data):
 
 def decrypt(private_key, encrypted):
     original_len = c_uint16()
-    rc = ntru.ntru_crypto_ntru_decrypt(
-        len(private_key), private_key, len(encrypted), encrypted, byref(original_len), NULL
+    rc = ntru_decrypt(
+        len(private_key), private_key, len(encrypted), encrypted, byref(original_len), NULL_BYTEBUF
     )
     parse_error(rc)
 
     original = (c_char * original_len.value)()
 
-    rc = ntru.ntru_crypto_ntru_decrypt(
+    rc = ntru_decrypt(
         len(private_key), private_key, len(encrypted), encrypted, byref(original_len), original
     )
     parse_error(rc)
