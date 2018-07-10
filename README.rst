@@ -72,7 +72,7 @@ The NTRU Encryption algorithm is a lattice-based asymmetric encryption algorithm
     pub_key, prv_key = key_pair
 
     # Encrypt some data
-    encrypted_data = pub_key.encrypt("Example Data")
+    encrypted_data = pub_key.encrypt(b"Example Data")
     # And decrypt it
     decrypted_data = prv_key.decrypt(encrypted_data)
     print(decrypted_data)
